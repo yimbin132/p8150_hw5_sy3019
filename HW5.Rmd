@@ -53,48 +53,67 @@ This "problem" focuses on structure of your submission, especially the use git a
 library(tidyverse)
 ```
 
-
-## Problem 1
-
-The code chunk below imports the data in individual spreadsheets contained in `./data/zip_data/`. To do this, I create a dataframe that includes the list of all files in that directory and the complete path to each file. As a next step, I `map` over paths and import data using the `read_csv` function. Finally, I `unnest` the result of `map`.
+## Problem 2
 
 ```{r}
-full_df = 
-  tibble(
-    files = list.files("data/zip_data/"),
-    path = str_c("data/zip_data/", files)
-  ) %>% 
-  mutate(data = map(path, read_csv)) %>% 
-  unnest()
-```
-
-The result of the previous code chunk isn't tidy -- data are wide rather than long, and some important variables are included as parts of others. The code chunk below tides the data using string manipulations on the file, converting from wide to long, and selecting relevant variables. 
-
-```{r}
-tidy_df = 
-  full_df %>% 
+homicide_df =
+  read_csv("./homicide-data.csv") %>%
   mutate(
-    files = str_replace(files, ".csv", ""),
-    group = str_sub(files, 1, 3)) %>% 
-  pivot_longer(
-    week_1:week_8,
-    names_to = "week",
-    values_to = "outcome",
-    names_prefix = "week_") %>% 
-  mutate(week = as.numeric(week)) %>% 
-  select(group, subj = files, week, outcome)
-```
+    victim_age = as.numeric(victim_age),
+    city_state = str_c(city, ", ", state)
+  ) %>%
+  group_by(city_state) %>%
+  summarize(unsolved_sum = sum(disposition == "Closed without arrest", disposition == "Open/No arrest"),
+    total_homicide = n()) 
 
-Finally, the code chunk below creates a plot showing individual data, faceted by group. 
+baltimore_df = 
+  homicide_df %>%
+  filter(city_state %in% c("Baltimore, MD"))
 
-```{r}
-tidy_df %>% 
-  ggplot(aes(x = week, y = outcome, group = subj, color = group)) + 
-  geom_point() + 
-  geom_path() + 
-  facet_grid(~group)
+Prop_baltimore_df =
+  prop.test(baltimore_df$unsolved_sum,baltimore_df$total_homicide,
+    alternative = c("two.sided"),
+    conf.level = 0.95, correct = TRUE) %>%
+  broom::tidy()
+
+Prop_baltimore_df %>%
+  select(estimate, "CI_lower" = conf.low, "CI_upper" = conf.high)
+
+ prop.test(homicide_df$unsolved_sum,homicide_df$total_homicide,
+    alternative = c("two.sided"),
+    conf.level = 0.95, correct = TRUE) %>%
+  broom::tidy()
+ 
+prop_homicide_df =
+  homicide_df %>%
+  mutate(proportion = purrr::map2(unsolved_sum,total_homicide,prop.test),
+         proportion = purrr::map(proportion, broom::tidy)) %>%
+  unnest(proportion) %>%
+  select(1:4,8,9)
+
+prop_homicide_df %>% 
+  ggplot(aes(reorder(city_state,estimate), estimate)) +       
+  geom_point(aes(color = city_state)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+    labs(
+    title = "Problem 2, plot of unsolved homicide proportion estimates and CIs for each city ",
+    x = "City, State",
+    y = "Proportion Estimate") +
+   theme(axis.text.x = element_text(angle = 90),
+         legend.position = "none")
+
 ```
+Now run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of purrr::map, purrr::map2, list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
+
 
 This plot suggests high within-subject correlation -- subjects who start above average end up above average, and those that start below average end up below average. Subjects in the control group generally don't change over time, but those in the experiment group increase their outcome in a roughly linear way. 
 
+The Washington Post has gathered data on homicides in 50 large U.S. cities and made the data available through a GitHub repository here. You can read their accompanying article here.
 
+Describe the raw data. Create a city_state variable (e.g. “Baltimore, MD”) and then summarize within cities to obtain the total number of homicides and the number of unsolved homicides (those for which the disposition is “Closed without arrest” or “Open/No arrest”).
+
+For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved; save the output of prop.test as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
+
+Now run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of purrr::map, purrr::map2, list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
+
+Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
