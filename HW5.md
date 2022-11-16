@@ -112,41 +112,102 @@ prop_homicide_df %>%
          legend.position = "none")
 ```
 
-<img src="HW5_files/figure-gfm/unnamed-chunk-1-1.png" width="90%" /> Now
-run prop.test for each of the cities in your dataset, and extract both
-the proportion of unsolved homicides and the confidence interval for
-each. Do this within a “tidy” pipeline, making use of purrr::map,
-purrr::map2, list columns and unnest as necessary to create a tidy
-dataframe with estimated proportions and CIs for each city.
+<img src="HW5_files/figure-gfm/unnamed-chunk-1-1.png" width="90%" /> \##
+Problem 3 When designing an experiment or analysis, a common question is
+whether it is likely that a true effect will be detected – put
+differently, whether a false null hypothesis will be rejected. The
+probability that a false null hypothesis is rejected is referred to as
+power, and it depends on several factors, including: the sample size;
+the effect size; and the error variance. In this problem, you will
+conduct a simulation to explore power in a one-sample t-test.
 
-This plot suggests high within-subject correlation – subjects who start
-above average end up above average, and those that start below average
-end up below average. Subjects in the control group generally don’t
-change over time, but those in the experiment group increase their
-outcome in a roughly linear way.
+First set the following design elements:
 
-The Washington Post has gathered data on homicides in 50 large U.S.
-cities and made the data available through a GitHub repository here. You
-can read their accompanying article here.
+Fix n=30 Fix σ=5 Set μ=0. Generate 5000 datasets from the model
 
-Describe the raw data. Create a city_state variable (e.g. “Baltimore,
-MD”) and then summarize within cities to obtain the total number of
-homicides and the number of unsolved homicides (those for which the
-disposition is “Closed without arrest” or “Open/No arrest”).
+x∼Normal\[μ,σ\]
 
-For the city of Baltimore, MD, use the prop.test function to estimate
-the proportion of homicides that are unsolved; save the output of
-prop.test as an R object, apply the broom::tidy to this object and pull
-the estimated proportion and confidence intervals from the resulting
-tidy dataframe.
+For each dataset, save μ^ and the p-value arising from a test of H:μ=0
+using α=0.05. Hint: to obtain the estimate and p-value, use broom::tidy
+to clean the output of t.test.
 
-Now run prop.test for each of the cities in your dataset, and extract
-both the proportion of unsolved homicides and the confidence interval
-for each. Do this within a “tidy” pipeline, making use of purrr::map,
-purrr::map2, list columns and unnest as necessary to create a tidy
-dataframe with estimated proportions and CIs for each city.
+Repeat the above for μ={1,2,3,4,5,6}, and complete the following:
 
-Create a plot that shows the estimates and CIs for each city – check out
-geom_errorbar for a way to add error bars based on the upper and lower
-limits. Organize cities according to the proportion of unsolved
-homicides.
+Make a plot showing the proportion of times the null was rejected (the
+power of the test) on the y axis and the true value of μ on the x axis.
+Describe the association between effect size and power. Make a plot
+showing the average estimate of μ^ on the y axis and the true value of μ
+on the x axis. Make a second plot (or overlay on the first) the average
+estimate of μ^ only in samples for which the null was rejected on the y
+axis and the true value of μ on the x axis. Is the sample average of μ^
+across tests for which the null is rejected approximately equal to the
+true value of μ? Why or why not?###
+
+#### Generating the dataset
+
+``` r
+sim_ttest = function(mu, n=30, sigma=5) {
+  
+  sim_data = tibble(
+    x = rnorm(n = n, mean = mu, sd = sigma),
+  )
+  
+  sim_data =
+  t.test(sim_data) %>%
+  broom::tidy() %>%
+  select(estimate, p.value)
+}
+
+sim_results_df = 
+  expand_grid(
+    mu = 0, 
+    iter = 1:5000
+  ) %>% 
+  mutate(
+    estimate_df = map(mu, sim_ttest)
+  ) %>% 
+  unnest(estimate_df)
+```
+
+``` r
+sim_ttest = function(mu, n=30, sigma=5) {
+  
+  sim_data = tibble(
+    x = rnorm(n = n, mean = mu, sd = sigma),
+  )
+  
+  sim_data =
+  t.test(sim_data) %>%
+  broom::tidy() %>%
+  select(estimate, p.value)
+}
+
+sim_results_df2 = 
+  expand_grid(
+    mu = 1:6, 
+    iter = 1:5000
+  ) %>% 
+  mutate(
+    estimate_df = map(mu, sim_ttest)
+  ) %>% 
+  unnest(estimate_df)
+```
+
+## Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of μ on the x axis. Describe the association between effect size and power.
+
+``` r
+sim_results_df2 %>% 
+  mutate(
+    reject = (sum(p.value < 0.05))/n()) %>%
+  ggplot(aes(x = mu, y = reject)) + 
+  geom_point() +
+  geom_line()
+```
+
+<img src="HW5_files/figure-gfm/unnamed-chunk-4-1.png" width="90%" /> \##
+Make a plot showing the average estimate of μ^ on the y axis and the
+true value of μ on the x axis. Make a second plot (or overlay on the
+first) the average estimate of μ^ only in samples for which the null was
+rejected on the y axis and the true value of μ on the x axis. Is the
+sample average of μ^ across tests for which the null is rejected
+approximately equal to the true value of μ? Why or why not?
