@@ -31,6 +31,11 @@ library(tidyverse)
 
 ## Problem 2
 
+Describe the raw data. Create a city_state variable (e.g. “Baltimore,
+MD”) and then summarize within cities to obtain the total number of
+homicides and the number of unsolved homicides (those for which the
+disposition is “Closed without arrest” or “Open/No arrest”).
+
 ``` r
 homicide_df =
   read_csv("./homicide-data.csv") %>%
@@ -151,13 +156,11 @@ sim_ttest = function(mu, n=30, sigma=5) {
   sim_data = tibble(
     x = rnorm(n = n, mean = mu, sd = sigma),
   )
-  
   sim_data =
   t.test(sim_data) %>%
   broom::tidy() %>%
   select(estimate, p.value)
 }
-
 sim_results_df = 
   expand_grid(
     mu = 0, 
@@ -171,17 +174,14 @@ sim_results_df =
 
 ``` r
 sim_ttest = function(mu, n=30, sigma=5) {
-  
   sim_data = tibble(
     x = rnorm(n = n, mean = mu, sd = sigma),
   )
-  
   sim_data =
   t.test(sim_data) %>%
   broom::tidy() %>%
   select(estimate, p.value)
 }
-
 sim_results_df2 = 
   expand_grid(
     mu = 1:6, 
@@ -197,17 +197,56 @@ sim_results_df2 =
 
 ``` r
 sim_results_df2 %>% 
-  mutate(
-    reject = (sum(p.value < 0.05))/n()) %>%
+  group_by(mu) %>%
+  summarize(reject = sum(p.value < 0.05)/n()) %>%
   ggplot(aes(x = mu, y = reject)) + 
-  geom_point() +
-  geom_line()
+  geom_point(colour = "green") +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1,6, by = 1)) +
+    labs(
+    title = "Problem 3, First plot, the proportion of times the null was rejected vs. True value of μ ",
+    x = "The true value of μ",
+    y = "The proportion of times the null was rejected (Power)") +
+   theme(legend.position = "none")
 ```
 
-<img src="HW5_files/figure-gfm/unnamed-chunk-4-1.png" width="90%" /> \##
+<img src="HW5_files/figure-gfm/unnamed-chunk-4-1.png" width="90%" />
 Make a plot showing the average estimate of μ^ on the y axis and the
 true value of μ on the x axis. Make a second plot (or overlay on the
 first) the average estimate of μ^ only in samples for which the null was
 rejected on the y axis and the true value of μ on the x axis. Is the
 sample average of μ^ across tests for which the null is rejected
 approximately equal to the true value of μ? Why or why not?
+
+``` r
+sim_results_df2 %>% 
+  group_by(mu) %>% 
+  summarize(mean = mean(estimate)) %>%
+  ggplot(aes(x = mu, y = mean)) +
+  geom_point() +
+  geom_line(color = "Red") +
+  labs(
+   title = "Problem 3, Second plot, average estimate of μ of full sample",
+   x = "True value of μ",
+   y = "Average estimate of μ") + 
+  scale_x_continuous(breaks = seq(1,6,by = 1))
+```
+
+<img src="HW5_files/figure-gfm/unnamed-chunk-5-1.png" width="90%" />
+
+``` r
+sim_results_df2 %>% 
+  filter(p.value < 0.05) %>% 
+  group_by(mu) %>% 
+  summarize(mean = mean(estimate)) %>%
+ggplot(aes(x = mu, y = mean)) +
+  geom_point() +
+  geom_line(color = "Blue") +
+  labs(
+   title = "Problem 3, Third plot, average estimate of μ of sample with rejected null",
+   x = "True value of μ",
+   y = "Average estimate of μ" + 
+  scale_x_continuous(breaks = seq(1,6,by = 1)))
+```
+
+<img src="HW5_files/figure-gfm/unnamed-chunk-5-2.png" width="90%" />
