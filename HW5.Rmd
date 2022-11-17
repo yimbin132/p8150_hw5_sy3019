@@ -68,6 +68,7 @@ homicide_df =
   summarize(unsolved_sum = sum(disposition == "Closed without arrest", disposition == "Open/No arrest"),
     total_homicide = n()) 
 ```
+
 The raw data has ``r nrow(homicide_df)`` observations and ``r ncol(homicide_df)`` variables. The `victim_age` variable had some missing observations with `Unknown`, so I substituted with `NA` and changed the variable as numeric with `as.numeric`.
   
 The following table shows the total number of homicides and the number of unsolved homicides for each city: `r homicide_df %>% knitr::kable()`
@@ -102,6 +103,8 @@ prop_homicide_df =
   unnest(proportion) %>%
   select(1:4,8,9)
 ```
+
+The estimated proportions and CIs for each city: `r prop_homicide_df %>% knitr::kable()`.
 
 Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
 ```{r}
@@ -190,6 +193,7 @@ sim_results_df2 %>%
     y = "The proportion of times the null was rejected (Power)") +
    theme(legend.position = "none")
 ```
+
 From the plot above, we can observe a clear positive relationship between the effect size and power, meaning power increases as effect size increases. However, as power approaches 1, especially after mu=3, the slope gets less steeper, meaning effect size would have diminishing returns.
 
 Make a plot showing the average estimate of μ^ on the y axis and the true value of μ on the x axis. Make a second plot (or overlay on the first) the average estimate of μ^ only in samples for which the null was rejected on the y axis and the true value of μ on the x axis. Is the sample average of μ^ across tests for which the null is rejected approximately equal to the true value of μ? Why or why not?
@@ -220,4 +224,5 @@ ggplot(aes(x = mu, y = mean)) +
    y = "Average estimate of μ" + 
   scale_x_continuous(breaks = seq(1,6,by = 1)))
 ```
+
 The sample average of μ^ across tests for which the null is rejected is not approximately equal to the true value of μ. At lower true values of μ, the average estimate of μ of sample with rejected null has higher value compared to average estimate μ of full sample. The sample average of estimated μ across tests for which the null is rejected is not approximately equal to the true value of μ . They become approximately equal at larger true values of μ. The slight differences at lower true values of μ are caused by the lower power at lower true values of μ. Not all samples are correctly rejected at lower power, causing the mean μ to deviated from the true values of μ.
